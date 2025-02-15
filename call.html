@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>電話をかける</title>
+    <script>
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const number = urlParams.get("number");
+            if (number) {
+                window.location.href = "tel:" + number;
+            }
+        };
+    </script>
+</head>
+<body>
+    <h2>電話アプリを開いています...</h2>
+    <p>もし自動で開かない場合は、<a id="manualLink">こちらをタップ</a></p>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const number = urlParams.get("number");
+        if (number) {
+            document.getElementById("manualLink").href = "tel:" + number;
+        }
+    </script>
+</body>
+</html>
