@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SMS送信</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #f5f5f5;
+      color: #222;
+    }
+
+    .wrap {
+      max-width: 520px;
+      margin: 0 auto;
+      padding: 24px 16px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    }
+
+    h1 {
+      font-size: 22px;
+      margin: 0 0 12px;
+    }
+
+    p {
+      line-height: 1.7;
+      margin: 10px 0;
+    }
+
+    .status {
+      background: #f0f4ff;
+      border-left: 4px solid #3b82f6;
+      padding: 12px;
+      border-radius: 8px;
+      margin: 16px 0;
+      font-size: 15px;
+    }
+
+    .error {
+      background: #fff1f2;
+      border-left: 4px solid #ef4444;
+    }
+
+    .sms-button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      text-decoration: none;
+      border: none;
+      border-radius: 999px;
+      padding: 16px 18px;
+      margin-top: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      background: #16a34a;
+      color: #fff;
+    }
+
+    .sub-button {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      text-decoration: none;
+      border-radius: 999px;
+      padding: 13px 16px;
+      margin-top: 10px;
+      font-size: 15px;
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .small {
+      color: #666;
+      font-size: 13px;
+    }
+
+    .preview {
+      white-space: pre-wrap;
+      background: #f9fafb;
+      border: 1px solid #e5e7eb;
+      padding: 12px;
+      border-radius: 10px;
+      font-size: 14px;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>SMS送信</h1>
+
+      <div id="status" class="status">
+        SMSアプリを開いています...
+      </div>
+
+      <p>
+        自動でSMSアプリが開かない場合は、下のボタンを押してください。
+      </p>
+
+      <a id="openSmsButton" class="sms-button" href="#">SMSアプリを開く</a>
+
+      <a id="openSmsButtonAlt" class="sub-button" href="#">別形式で開く</a>
+
+      <p class="small">
+        SMSアプリが開いたら、内容を確認して送信してください。
+      </p>
+
+      <div class="preview" id="messagePreview"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      const params = new URLSearchParams(window.location.search);
+
+      const rawPhone = params.get('phone') || params.get('number') || '';
+      const token = params.get('token') || '';
+
+      const statusEl = document.getElementById('status');
+      const openSmsButton = document.getElementById('openSmsButton');
+      const openSmsButtonAlt = document.getElementById('openSmsButtonAlt');
+      const messagePreview = document.getElementById('messagePreview');
+
+      function setStatus(message, isError) {
+        statusEl.textContent = message;
+        statusEl.className = isError ? 'status error' : 'status';
+      }
+
+      function normalizePhone(value) {
+        return String(value || '').replace(/[^\d+]/g, '');
+      }
+
+      function buildMessage(token) {
+        const formUrl = 'https://benriyamaru.com/rs/atobarai-entry/?token=' + encodeURIComponent(token);
+
+        return [
+          'コンビニ後払い審査フォームをお送りします。',
+          '',
+          '下記URLより、お名前・ご住所のご入力をお願いいたします。',
+          formUrl,
+          '',
+          '入力完了後、審査結果を確認いたします。',
+          'よろしくお願いいたします。'
+        ].join('\n');
+      }
+
+      function isIOS() {
+        return /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      }
+
+      const phone = normalizePhone(rawPhone);
+
+      if (!phone || !token) {
+        setStatus('SMS送信用の情報が不足しています。', true);
+        openSmsButton.style.display = 'none';
+        openSmsButtonAlt.style.display = 'none';
+        return;
+      }
+
+      const message = buildMessage(token);
+      const encodedMessage = encodeURIComponent(message);
+
+      /*
+        iPhoneは sms:電話番号&body=本文 が動くことが多く、
+        Androidは sms:電話番号?body=本文 が動くことが多いです。
+        端末差があるため、両方用意します。
+      */
+      const smsUrlIOS = 'sms:' + encodeURIComponent(phone) + '&body=' + encodedMessage;
+      const smsUrlAndroid = 'sms:' + encodeURIComponent(phone) + '?body=' + encodedMessage;
+
+      const primaryUrl = isIOS() ? smsUrlIOS : smsUrlAndroid;
+      const secondaryUrl = isIOS() ? smsUrlAndroid : smsUrlIOS;
+
+      openSmsButton.href = primaryUrl;
+      openSmsButtonAlt.href = secondaryUrl;
+
+      messagePreview.textContent = '宛先：' + phone + '\n\n本文：\n' + message;
+
+      setStatus('SMSアプリを開いています。開かない場合はボタンを押してください。', false);
+
+      // 自動起動を試す
+      setTimeout(function () {
+        try {
+          window.location.href = primaryUrl;
+        } catch (e) {
+          setStatus('自動で開けませんでした。下のボタンを押してください。', true);
+        }
+      }, 700);
+
+      // 数秒後もページに残っている場合の案内
+      setTimeout(function () {
+        setStatus('SMSアプリが開かない場合は、下の「SMSアプリを開く」を押してください。', false);
+      }, 2500);
+    })();
+  </script>
+</body>
+</html>
