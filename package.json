@@ -1,0 +1,7 @@
+{
+  "name": "phone-caller01",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  }
+}
