@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
   <title>SMS送信</title>
   <style>
     body {
@@ -125,10 +126,25 @@
     (function () {
       'use strict';
 
-      const params = new URLSearchParams(window.location.search);
+      const queryParams = new URLSearchParams(window.location.search);
+      const fragmentParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
 
-      const rawPhone = params.get('phone') || params.get('number') || '';
-      const token = params.get('token') || '';
+      const rawPhone = fragmentParams.get('phone') || fragmentParams.get('number') ||
+        queryParams.get('phone') || queryParams.get('number') || '';
+      const token = fragmentParams.get('token') || queryParams.get('token') || '';
+
+      if (window.history && typeof window.history.replaceState === 'function') {
+        const sanitizedUrl = new URL(window.location.href);
+        ['phone', 'number', 'token'].forEach(function (name) {
+          sanitizedUrl.searchParams.delete(name);
+        });
+        const sanitizedFragment = new URLSearchParams(sanitizedUrl.hash.replace(/^#/, ''));
+        ['phone', 'number', 'token'].forEach(function (name) {
+          sanitizedFragment.delete(name);
+        });
+        sanitizedUrl.hash = sanitizedFragment.toString() ? '#' + sanitizedFragment.toString() : '';
+        window.history.replaceState(window.history.state, document.title, sanitizedUrl.toString());
+      }
 
       const statusEl = document.getElementById('status');
       const openSmsButton = document.getElementById('openSmsButton');
@@ -145,7 +161,7 @@
       }
 
       function buildMessage(token) {
-        const formUrl = 'https://benriyamaru.com/rs/atobarai-entry/?token=' + encodeURIComponent(token);
+        const formUrl = 'https://benriyamaru.com/rs/atobarai-entry/#token=' + encodeURIComponent(token);
 
         return [
           'コンビニ後払い審査フォームをお送りします。',
